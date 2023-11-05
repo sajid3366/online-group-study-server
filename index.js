@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 const app = express();
 
@@ -30,6 +30,7 @@ async function run() {
 
     const userCollection = client.db("studygroupDB").collection("user")
     const assignmentCollection = client.db("studygroupDB").collection("assignment")
+    const myAssignmentCollection = client.db("studygroupDB").collection("myassignment")
 
     // for user collection
     app.get('/user', async (req, res) => {
@@ -52,9 +53,93 @@ async function run() {
     })
 
     app.post('/assignment', async (req, res) => {
-      const newUser = req.body;
-      const result = await assignmentCollection.insertOne(newUser);
+      const newAssignment = req.body;
+      const result = await assignmentCollection.insertOne(newAssignment);
       res.send(result)
+    })
+
+    app.get('/assignment/update/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const assignment = await assignmentCollection.findOne(query)
+      res.send(assignment)
+    })
+
+
+    // this is for myassignment
+    app.post('/myassignment', async (req, res) => {
+      const newAssignment = req.body;
+      const result = await myAssignmentCollection.insertOne(newAssignment);
+      res.send(result)
+    })
+
+    app.get('/myassignment', async (req, res) => {
+      const cursor = myAssignmentCollection.find();
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+
+    app.get('/myassignment/submit/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const assignment = await myAssignmentCollection.findOne(query)
+      res.send(assignment)
+    })
+    app.get('/myassignment/givemark/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const assignment = await myAssignmentCollection.findOne(query)
+      res.send(assignment)
+    })
+    app.get('/myassignment/:status', async (req, res) => {
+      const status = req.params.status;
+      const query = { status: status }
+      const pendingAssignment = await myAssignmentCollection.find(query).toArray()
+      res.send(pendingAssignment)
+    })
+
+    app.put('/myassignment/givemark/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const markGivenAssignment = req.body;
+      console.log("mark",markGivenAssignment);
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const assignment = {
+        $set: {
+          obtainedMark: markGivenAssignment.obtainedMark,
+          feedback: markGivenAssignment.feedback,
+          status: markGivenAssignment.status,
+        }
+      }
+      const result = await myAssignmentCollection.updateOne(filter, assignment, options)
+      res.send(result);
+
+    })
+
+
+
+    app.put('/assignment/:id', async (req, res) => {
+      const id = req.params.id;
+      const updatedAssignment = req.body;
+      console.log(updatedAssignment);
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const assignment = {
+        $set: {
+          title: updatedAssignment.title,
+          difficulty: updatedAssignment.difficulty,
+          mark: updatedAssignment.mark,
+          date: updatedAssignment.date,
+          description: updatedAssignment.description,
+          photo: updatedAssignment.photo,
+          status : updatedAssignment.status
+          
+        }
+      }
+      const result = await assignmentCollection.updateOne(filter, assignment, options)
+      res.send(result);
+
     })
 
 
