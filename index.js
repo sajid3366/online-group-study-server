@@ -97,12 +97,18 @@ async function run() {
       const pendingAssignment = await myAssignmentCollection.find(query).toArray()
       res.send(pendingAssignment)
     })
+    app.get('/myassignment/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email }
+      console.log(query);
+      console.log(email);
+      const userAssignment = await myAssignmentCollection.find(query).toArray()
+      res.send(userAssignment)
+    })
 
     app.put('/myassignment/givemark/:id', async (req, res) => {
       const id = req.params.id;
-      console.log(id);
       const markGivenAssignment = req.body;
-      console.log("mark",markGivenAssignment);
       const filter = { _id: new ObjectId(id) }
       const options = { upsert: true };
       const assignment = {
@@ -133,14 +139,15 @@ async function run() {
           date: updatedAssignment.date,
           description: updatedAssignment.description,
           photo: updatedAssignment.photo,
-          status : updatedAssignment.status
-          
+          status: updatedAssignment.status
+
         }
       }
       const result = await assignmentCollection.updateOne(filter, assignment, options)
       res.send(result);
 
     })
+
 
 
     // Send a ping to confirm a successful connection
