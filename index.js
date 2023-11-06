@@ -65,6 +65,22 @@ async function run() {
       res.send(assignment)
     })
 
+    app.get('/assignment/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await assignmentCollection.findOne(query)
+      res.send(result)
+
+    })
+    // assignment delete
+    app.delete('/assignment/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await assignmentCollection.deleteOne(query);
+      res.send(result)
+
+    })
+
 
     // this is for myassignment
     app.post('/myassignment', async (req, res) => {
@@ -91,20 +107,22 @@ async function run() {
       const assignment = await myAssignmentCollection.findOne(query)
       res.send(assignment)
     })
-    app.get('/myassignment/:status', async (req, res) => {
+
+    app.get('/myassignment/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email }
+      const userAssignment = await myAssignmentCollection.find(query).toArray()
+      res.send(userAssignment)
+    })
+
+    app.get('/pendingassignment/:status', async (req, res) => {
       const status = req.params.status;
       const query = { status: status }
       const pendingAssignment = await myAssignmentCollection.find(query).toArray()
       res.send(pendingAssignment)
     })
-    app.get('/myassignment/:email', async (req, res) => {
-      const email = req.params.email;
-      const query = { email: email }
-      console.log(query);
-      console.log(email);
-      const userAssignment = await myAssignmentCollection.find(query).toArray()
-      res.send(userAssignment)
-    })
+
+
 
     app.put('/myassignment/givemark/:id', async (req, res) => {
       const id = req.params.id;
