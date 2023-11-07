@@ -97,12 +97,7 @@ async function run() {
     })
 
     // for create assignment
-    app.get('/assignment', async (req, res) => {
-      const cursor = assignmentCollection.find();
-      const result = await cursor.toArray()
-      res.send(result)
-    })
-
+    
     app.post('/assignment', async (req, res) => {
       const newAssignment = req.body;
       const result = await assignmentCollection.insertOne(newAssignment);
@@ -154,8 +149,6 @@ async function run() {
 
     })
 
-
-
     // assignment delete
     app.delete('/assignment/:id', async (req, res) => {
       const id = req.params.id;
@@ -164,7 +157,19 @@ async function run() {
       res.send(result)
 
     })
-
+    // for pagination
+    app.get('/countAssignment', async (req, res) => {
+      const count = await assignmentCollection.estimatedDocumentCount();
+      res.send({ count });
+    })
+    app.get('/assignment', async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size)
+      // console.log("pagination query:", page, size);
+      const result = await assignmentCollection.find().skip(page * size).limit(size).toArray();
+  
+      res.send(result);
+    })
 
     // this is for myassignment
     app.post('/myassignment', async (req, res) => {
@@ -201,8 +206,13 @@ async function run() {
       res.send(userAssignment)
     })
 
-    app.get('/pendingassignment/:status', async (req, res) => {
+    app.get('/pendingassignment/:status', logger, verifyToken, async (req, res) => {
       const status = req.params.status;
+      // const email = req.body;
+      // console.log("pendig email", email);
+      // if(req.user.user !== email){
+      //   return res.status(403).send({ message: "forbiden access" })
+      // }
       const query = { status: status }
       const pendingAssignment = await myAssignmentCollection.find(query).toArray()
       res.send(pendingAssignment)
@@ -228,11 +238,6 @@ async function run() {
     })
 
 
-
-
-
-
-
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -242,36 +247,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
-
-
-// const { MongoClient, ServerApiVersion } = require('mongodb');
-// const uri = "mongodb+srv://<automotiveCarHant>:<0TC2zduR3ASj24jq>@cluster0.l9mlnno.mongodb.net/?retryWrites=true&w=majority";
-
-// // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-// const client = new MongoClient(uri, {
-//   serverApi: {
-//     version: ServerApiVersion.v1,
-//     strict: true,
-//     deprecationErrors: true,
-//   }
-// });
-
-// async function run() {
-//   try {
-//     // Connect the client to the server	(optional starting in v4.7)
-//     await client.connect();
-//     // Send a ping to confirm a successful connection
-//     await client.db("admin").command({ ping: 1 });
-//     console.log("Pinged your deployment. You successfully connected to MongoDB!");
-//   } finally {
-//     // Ensures that the client will close when you finish/error
-//     // await client.close();
-//   }
-// }
-// run().catch(console.dir);
-
-
 
 app.get("/", (req, res) => {
   res.send("online study group server is runnig");
