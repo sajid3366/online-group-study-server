@@ -1,13 +1,21 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 const app = express();
 
 // middleware
-app.use(cors())
-app.use(express.json())
+app.use(cors({
+  origin: [
+    "http://localhost:5173"
+  ],
+  credentials: true
+}));
+app.use(express.json());
+app.use(cookieParser());
 
 
 
@@ -22,6 +30,29 @@ const client = new MongoClient(uri, {
   }
 });
 
+
+// middlewares
+
+const logger = (req, res, next) => {
+  console.log('request method and url', req.method, req.url);
+  next();
+}
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" })
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" })
+    }
+    req.user = decoded;
+    next();
+  })
+}
+
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -31,6 +62,26 @@ async function run() {
     const userCollection = client.db("studygroupDB").collection("user")
     const assignmentCollection = client.db("studygroupDB").collection("assignment")
     const myAssignmentCollection = client.db("studygroupDB").collection("myassignment")
+
+    // for jwt auth api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      console.log("user", user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+      })
+        .send({ success: true })
+
+    })
+
+    app.post('/logout', async (req, res) => {
+      const user = req.body;
+      res.clearCookie('token', { maxAge: 0 }).send({ success: true })
+    })
+
 
     // for user collection
     app.get('/user', async (req, res) => {
@@ -58,6 +109,29 @@ async function run() {
       res.send(result)
     })
 
+    app.put('/assignment/:id', async (req, res) => {
+      const id = req.params.id;
+      const updatedAssignment = req.body;
+      console.log(updatedAssignment);
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const assignment = {
+        $set: {
+          title: updatedAssignment.title,
+          difficulty: updatedAssignment.difficulty,
+          mark: updatedAssignment.mark,
+          date: updatedAssignment.date,
+          description: updatedAssignment.description,
+          photo: updatedAssignment.photo,
+          status: updatedAssignment.status
+
+        }
+      }
+      const result = await assignmentCollection.updateOne(filter, assignment, options)
+      res.send(result);
+
+    })
+
     app.get('/assignment/update/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
@@ -65,13 +139,23 @@ async function run() {
       res.send(assignment)
     })
 
-    app.get('/assignment/:id', async(req, res) =>{
+    app.get('/assignment/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await assignmentCollection.findOne(query)
       res.send(result)
 
     })
+    app.get('/assignmentlevel/:difficulty', async (req, res) => {
+      const difficulty = req.params.difficulty;
+      const query = { difficulty: difficulty };
+      const result = await assignmentCollection.find(query).toArray()
+      res.send(result)
+
+    })
+
+
+
     // assignment delete
     app.delete('/assignment/:id', async (req, res) => {
       const id = req.params.id;
@@ -90,8 +174,7 @@ async function run() {
     })
 
     app.get('/myassignment', async (req, res) => {
-      const cursor = myAssignmentCollection.find();
-      const result = await cursor.toArray()
+      const result =await myAssignmentCollection.find().toArray();
       res.send(result)
     })
 
@@ -108,8 +191,11 @@ async function run() {
       res.send(assignment)
     })
 
-    app.get('/myassignment/:email', async (req, res) => {
+    app.get('/myassignment/:email', logger, verifyToken, async (req, res) => {
       const email = req.params.email;
+      if(req.user.user !== email){
+        return res.status(403).send({ message: "forbiden access" })
+      }
       const query = { email: email }
       const userAssignment = await myAssignmentCollection.find(query).toArray()
       res.send(userAssignment)
@@ -143,28 +229,7 @@ async function run() {
 
 
 
-    app.put('/assignment/:id', async (req, res) => {
-      const id = req.params.id;
-      const updatedAssignment = req.body;
-      console.log(updatedAssignment);
-      const filter = { _id: new ObjectId(id) }
-      const options = { upsert: true };
-      const assignment = {
-        $set: {
-          title: updatedAssignment.title,
-          difficulty: updatedAssignment.difficulty,
-          mark: updatedAssignment.mark,
-          date: updatedAssignment.date,
-          description: updatedAssignment.description,
-          photo: updatedAssignment.photo,
-          status: updatedAssignment.status
 
-        }
-      }
-      const result = await assignmentCollection.updateOne(filter, assignment, options)
-      res.send(result);
-
-    })
 
 
 
