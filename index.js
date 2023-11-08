@@ -10,7 +10,10 @@ const app = express();
 // middleware
 app.use(cors({
   origin: [
-    "http://localhost:5173"
+    // "http://localhost:5173",
+    "https://online-group-study-auth.web.app",
+    "online-group-study-auth.web.app",
+    "online-group-study-auth.firebaseapp.com"
   ],
   credentials: true
 }));
@@ -195,9 +198,12 @@ async function run() {
       const assignment = await myAssignmentCollection.findOne(query)
       res.send(assignment)
     })
+    
 
     app.get('/myassignment/:email', logger, verifyToken, async (req, res) => {
       const email = req.params.email;
+      console.log(email);
+      console.log("req",req.user?.user);
       if(req.user.user !== email){
         return res.status(403).send({ message: "forbiden access" })
       }
@@ -206,7 +212,7 @@ async function run() {
       res.send(userAssignment)
     })
 
-    app.get('/pendingassignment/:status', logger, verifyToken, async (req, res) => {
+    app.get('/pendingassignment/:status', async (req, res) => {
       const status = req.params.status;
       // const email = req.body;
       // console.log("pendig email", email);
